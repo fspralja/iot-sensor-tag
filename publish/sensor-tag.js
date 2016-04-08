@@ -20,6 +20,16 @@ var macUtil = require('getmac');
 var properties = require('properties');
 var connected = false;
 
+//from config values
+var sensorName = "TI Sensor Tag";
+
+var mqttKeepalive = 30;
+
+var accel = false;
+var keys = false;
+var air = true;
+
+var airInterval = 5000;
 
 properties.parse('./config.properties', {path: true}, function(err, cfg) {
   if (err) {
@@ -36,12 +46,15 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
     	console.warn('The device MAC address does not match the ID in the configuration file.');
     }
 
+	sensorName = cfg['sensorName'] ? cfg['sensorName'] : sensorName;
+	mqttKeepalive = cfg['mqtt.keepalive'] > 0 ? cfg['mqtt.keepalive'] : mqttKeepalive;
+
     var clientId = ['d', cfg.org, cfg.type, cfg.id].join(':');
 
     var client = mqtt.connect("mqtts://" + cfg.org + '.messaging.internetofthings.ibmcloud.com:8883', 
       {
         "clientId" : clientId,
-        "keepalive" : 30,
+        "keepalive" : mqttKeepalive,
         "username" : "use-token-auth",
         "password" : cfg['auth-token']
       });
@@ -71,9 +84,9 @@ function monitorSensorTag(client) {
 	  console.log('Connected To Sensor Tag');
 	  device.discoverServicesAndCharacteristics(function(callback){
 	    //getDeviceInfo();
-		initAirSensors();
-		initAccelAndGyro();
-		initKeys();
+		if(air) initAirSensors();
+		if(accel) initAccelAndGyro();
+		if(keys) initKeys();
 	  });
 	});
 
@@ -121,10 +134,10 @@ function monitorSensorTag(client) {
 	  device.notifyMagnetometer(function(){});
 	};
 
-	device.on('gyroscopeChange', function(x, y, z) {
+	if(accel) device.on('gyroscopeChange', function(x, y, z) {
 	  var data = {
                    "d": {
-                     "myName": "TI Sensor Tag",
+                     "myName": sensorName,
                      "gyroX" : x,
                      "gyroY" : y,
                      "gyroZ" : z
@@ -134,10 +147,10 @@ function monitorSensorTag(client) {
       });
 	});
 
-	device.on('accelerometerChange', function(x, y, z) {
+	if(accel) device.on('accelerometerChange', function(x, y, z) {
 	  var data = {
                    "d": {
-                     "myName": "TI Sensor Tag",
+                     "myName": sensorName,
                      "accelX" : x,
                      "accelY" : y,
                      "accelZ" : z
@@ -147,10 +160,10 @@ function monitorSensorTag(client) {
       });
 	});
 
-	device.on('magnetometerChange', function(x, y, z) {
+	if(keys) device.on('magnetometerChange', function(x, y, z) {
 	  var data = {
                    "d": {
-                     "myName": "TI Sensor Tag",
+                     "myName": sensorName,
                      "magX" : x,
                      "magY" : y,
                      "magZ" : z
@@ -160,7 +173,7 @@ function monitorSensorTag(client) {
       });
 	});
 
-    var previousClick = {"left" : false, "right" : false};
+    if(keys) var previousClick = {"left" : false, "right" : false};
 	device.on('simpleKeyChange', function(left, right) {
 	  var data = {
                    "d": {
@@ -208,7 +221,7 @@ function monitorSensorTag(client) {
 				  device.readIrTemperature(function(error, objectTemperature, ambientTemperature) {
 					var data = {
 					   "d": {
-						 "myName": "TI Sensor Tag",
+						 "myName": sensorName,
 						 "pressure" : pressure,
 						 "humidity" : humidity,
 						 "objTemp" : objectTemperature,
@@ -223,7 +236,9 @@ function monitorSensorTag(client) {
 				});
 			  });
 		  });
-		}, 5000);
+		}, airInterval);
 	}
   });
+  
+  console.log('Sensortag.discover end.');
 };
