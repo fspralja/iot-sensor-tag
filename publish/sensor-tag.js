@@ -64,7 +64,7 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 		  console.log('MQTT client connected to IBM IoT Cloud.');
 		});
 		client.on('error', function(err) {
-		  console.log('client error' + err + ', restarting...';
+		  console.log('client error' + err + ', restarting...');
 		  //process.exit(1);
 		  connectClient();
 		});
