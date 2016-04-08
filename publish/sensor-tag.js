@@ -32,6 +32,8 @@ var air = true;
 var airInterval = 5000;
 var intervalId;
 
+var client;
+
 properties.parse('./config.properties', {path: true}, function(err, cfg) {
   if (err) {
     console.error('A file named config.properties containing the device registration from the IBM IoT Cloud is missing.');
@@ -49,11 +51,14 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 
 	sensorName = cfg['sensorName'] ? cfg['sensorName'] : sensorName;
 	mqttKeepalive = cfg['mqtt.keepalive'] > 0 ? cfg['mqtt.keepalive'] : mqttKeepalive;
+	
+	console.log("sensorName: " + sensorName);
+	console.log("mqtt.keepalive: " + mqttKeepalive);
 
     var clientId = ['d', cfg.org, cfg.type, cfg.id].join(':');
 
 	function connectClient() {
-		var client = mqtt.connect("mqtts://" + cfg.org + '.messaging.internetofthings.ibmcloud.com:8883', 
+		client = mqtt.connect("mqtts://" + cfg.org + '.messaging.internetofthings.ibmcloud.com:8883', 
 		  {
 			"clientId" : clientId,
 			"keepalive" : mqttKeepalive,
@@ -66,20 +71,22 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 		client.on('error', function(err) {
 		  console.log('client error' + err + ', restarting...');
 		  //process.exit(1);
+		  client = null;
 		  connectClient();
 		});
 		client.on('close', function() {
 		  console.log('client closed, restarting...');
 		  //process.exit(1);
+		  client = null;
 		  connectClient();
 		});
 	};
 	connectClient();
-    monitorSensorTag(client);
+	monitorSensorTag();
   });
 });
 
-function monitorSensorTag(client) {
+function monitorSensorTag() {
   console.log('Make sure the Sensor Tag is on!');
 
   SensorTag.discover(function(device){
@@ -89,7 +96,7 @@ function monitorSensorTag(client) {
 	  if(err) {
 	  	console.log('Device connect error: ' + err + ', restarting...');
 		clearInterval(intervalId);
-		monitorSensorTag(client);
+		monitorSensorTag();
 		return;
 	  }
 	  
@@ -108,7 +115,7 @@ function monitorSensorTag(client) {
 	  //client.end();
 	  console.log('Device disconnected, restarting...');
 	  clearInterval(intervalId);
-	  monitorSensorTag(client);
+	  monitorSensorTag();
 	});
 
 	function getDeviceInfo() {
@@ -158,7 +165,7 @@ function monitorSensorTag(client) {
                      "gyroZ" : z
                     }
                   };
-	  client.publish('iot-2/evt/gyro/fmt/json', JSON.stringify(data), function() {
+	  if(client) client.publish('iot-2/evt/gyro/fmt/json', JSON.stringify(data), function() {
       });
 	});
 
@@ -171,7 +178,7 @@ function monitorSensorTag(client) {
                      "accelZ" : z
                     }
                   };
-	  client.publish('iot-2/evt/accel/fmt/json', JSON.stringify(data), function() {
+	  if(client) client.publish('iot-2/evt/accel/fmt/json', JSON.stringify(data), function() {
       });
 	});
 
@@ -184,7 +191,7 @@ function monitorSensorTag(client) {
                      "magZ" : z
                     }
                   };
-	  client.publish('iot-2/evt/mag/fmt/json', JSON.stringify(data), function() {
+	  if(client) client.publish('iot-2/evt/mag/fmt/json', JSON.stringify(data), function() {
       });
 	});
 
@@ -216,7 +223,7 @@ function monitorSensorTag(client) {
       previousClick.left = false;
       previousClick.right = false;
 	  
-	  client.publish('iot-2/evt/click/fmt/json', JSON.stringify(data), function() {
+	  if(client) client.publish('iot-2/evt/click/fmt/json', JSON.stringify(data), function() {
       });
 	});
 
@@ -245,7 +252,7 @@ function monitorSensorTag(client) {
 						 "lux" : lux
 						}
 					  };
-					client.publish('iot-2/evt/air/fmt/json', JSON.stringify(data), function() {
+					if(client) client.publish('iot-2/evt/air/fmt/json', JSON.stringify(data), function() {
 					});
 				  });
 				});
