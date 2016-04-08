@@ -30,6 +30,7 @@ var keys = false;
 var air = true;
 
 var airInterval = 5000;
+var intervalId;
 
 properties.parse('./config.properties', {path: true}, function(err, cfg) {
   if (err) {
@@ -51,24 +52,29 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 
     var clientId = ['d', cfg.org, cfg.type, cfg.id].join(':');
 
-    var client = mqtt.connect("mqtts://" + cfg.org + '.messaging.internetofthings.ibmcloud.com:8883', 
-      {
-        "clientId" : clientId,
-        "keepalive" : mqttKeepalive,
-        "username" : "use-token-auth",
-        "password" : cfg['auth-token']
-      });
-    client.on('connect', function() {
-	  console.log('MQTT client connected to IBM IoT Cloud.');
-    });
-    client.on('error', function(err) {
-	  console.log('client error' + err);
-	  process.exit(1);
-    });
-    client.on('close', function() {
-	  console.log('client closed');
-	  process.exit(1);
-    });
+	function connectClient() {
+		var client = mqtt.connect("mqtts://" + cfg.org + '.messaging.internetofthings.ibmcloud.com:8883', 
+		  {
+			"clientId" : clientId,
+			"keepalive" : mqttKeepalive,
+			"username" : "use-token-auth",
+			"password" : cfg['auth-token']
+		  });
+		client.on('connect', function() {
+		  console.log('MQTT client connected to IBM IoT Cloud.');
+		});
+		client.on('error', function(err) {
+		  console.log('client error' + err + ', restarting...';
+		  //process.exit(1);
+		  connectClient();
+		});
+		client.on('close', function() {
+		  console.log('client closed, restarting...');
+		  //process.exit(1);
+		  connectClient();
+		});
+	};
+	connectClient();
     monitorSensorTag(client);
   });
 });
@@ -79,7 +85,14 @@ function monitorSensorTag(client) {
   SensorTag.discover(function(device){
 	console.log('Discovered device with UUID: ' + device['uuid']);
 
-	device.connect(function(){
+	device.connectAndSetUp(function(err){
+	  if(err) {
+	  	console.log('Device connect error: ' + err + ', restarting...');
+		clearInterval(intervalId);
+		monitorSensorTag(client);
+		return;
+	  }
+	  
 	  connected = true;
 	  console.log('Connected To Sensor Tag');
 	  device.discoverServicesAndCharacteristics(function(callback){
@@ -92,8 +105,10 @@ function monitorSensorTag(client) {
 
 	device.on('disconnect', function(onDisconnect) {
 	  connected = false;
-	  client.end();
-	  console.log('Device disconnected.');
+	  //client.end();
+	  console.log('Device disconnected, restarting...');
+	  clearInterval(intervalId);
+	  monitorSensorTag(client);
 	});
 
 	function getDeviceInfo() {
@@ -210,7 +225,7 @@ function monitorSensorTag(client) {
 		device.enableHumidity(function(err) {if (err) throw err;});
 		device.enableBarometricPressure(function(err) {if (err) throw err;});
 		device.enableLuxometer(function(err) {if (err) throw err;});
-		var intervalId = setInterval(function() {
+		intervalId = setInterval(function() {
 		  if(!connected) {
 		  	clearInterval(intervalId);
 		  	return;
@@ -239,6 +254,4 @@ function monitorSensorTag(client) {
 		}, airInterval);
 	}
   });
-  
-  console.log('Sensortag.discover end.');
 };
