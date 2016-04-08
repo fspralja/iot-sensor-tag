@@ -261,7 +261,7 @@ function monitorSensorTag() {
 		  });
 		}, airInterval);
 	}
-  });
+  };
   
   SensorTag.discoverAll(onDiscover);
 };
