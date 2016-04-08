@@ -89,7 +89,8 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 function monitorSensorTag() {
   console.log('Make sure the Sensor Tag is on!');
 
-  SensorTag.discover(function(device){
+  //SensorTag.discover(function(device){
+  var onDiscover = function(device) {
 	console.log('Discovered device with UUID: ' + device['uuid']);
 
 	device.connectAndSetUp(function(err){
@@ -261,4 +262,6 @@ function monitorSensorTag() {
 		}, airInterval);
 	}
   });
+  
+  SensorTag.discoverAll(onDiscover);
 };
