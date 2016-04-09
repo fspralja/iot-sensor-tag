@@ -24,6 +24,8 @@ var connected = false;
 var sensorName = "TI Sensor Tag";
 
 var mqttKeepalive = 30;
+var reconnectTimeout = 1000;
+
 
 var accel = false;
 var keys = false;
@@ -58,6 +60,8 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
     var clientId = ['d', cfg.org, cfg.type, cfg.id].join(':');
 
 	function connectClient() {
+	    console.log('Connecting to mqtts://' + cfg.org + '.messaging.internetofthings.ibmcloud.com:8883');
+
 		client = mqtt.connect("mqtts://" + cfg.org + '.messaging.internetofthings.ibmcloud.com:8883', 
 		  {
 			"clientId" : clientId,
@@ -72,13 +76,19 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 		  console.log('client error' + err + ', restarting...');
 		  //process.exit(1);
 		  client = null;
-		  connectClient();
+		  setTimeout(function() {
+		  	connectClient();
+		  }, reconnectTimeout);
+		  
 		});
 		client.on('close', function() {
 		  console.log('client closed, restarting...');
 		  //process.exit(1);
 		  client = null;
-		  connectClient();
+		  setTimeout(function() {
+		  	connectClient();
+		  }, reconnectTimeout);
+		  
 		});
 	};
 	connectClient();
@@ -91,32 +101,50 @@ function monitorSensorTag() {
 
   //SensorTag.discover(function(device){
   var onDiscover = function(device) {
+	
+	//got the device
+	SensorTag.stopDiscoverAll(onDiscover);
+	
 	console.log('Discovered device with UUID: ' + device['uuid']);
 
-	device.connectAndSetUp(function(err){
+	console.log('Connecting to Device UUID: ' + device['uuid']);
+
+	var doConnect = function (err) {
 	  if(err) {
 	  	console.log('Device connect error: ' + err + ', restarting...');
 		clearInterval(intervalId);
-		monitorSensorTag();
+		
+		setTimeout(function() {
+			console.log('Connecting to Device UUID: ' + device['uuid']);
+		  	device.connectAndSetUp(doConnect);
+		}, reconnectTimeout);
+		
 		return;
 	  }
 	  
 	  connected = true;
 	  console.log('Connected To Sensor Tag');
-	  device.discoverServicesAndCharacteristics(function(callback){
+	  device.discoverServicesAndCharacteristics(function(callback) {
 	    //getDeviceInfo();
 		if(air) initAirSensors();
 		if(accel) initAccelAndGyro();
 		if(keys) initKeys();
 	  });
-	});
+	}
+
+	device.connectAndSetUp(doConnect);
 
 	device.on('disconnect', function(onDisconnect) {
 	  connected = false;
 	  //client.end();
 	  console.log('Device disconnected, restarting...');
 	  clearInterval(intervalId);
-	  monitorSensorTag();
+	  //monitorSensorTag();
+	  
+	  setTimeout(function() {
+	  		console.log('Connecting to Device UUID: ' + device['uuid']);
+		  	device.connectAndSetUp(doConnect);
+		}, reconnectTimeout);
 	});
 
 	function getDeviceInfo() {
@@ -197,7 +225,7 @@ function monitorSensorTag() {
 	});
 
     if(keys) var previousClick = {"left" : false, "right" : false};
-	device.on('simpleKeyChange', function(left, right) {
+	if(keys) device.on('simpleKeyChange', function(left, right) {
 	  var data = {
                    "d": {
                      "myName": "TI SensorTag",
