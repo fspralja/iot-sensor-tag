@@ -52,10 +52,14 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
     }
 
 	sensorName = cfg['sensorName'] ? cfg['sensorName'] : sensorName;
-	mqttKeepalive = cfg['mqtt.keepalive'] > 0 ? cfg['mqtt.keepalive'] : mqttKeepalive;
+	mqttKeepalive = cfg['mqttKeepalive'] > 0 ? cfg['mqttKeepalive'] : mqttKeepalive;
+	reconnectTimeout = cfg['reconnectTimeout'] > 0 ? cfg['reconnectTimeout'] : reconnectTimeout;
+	airInterval = cfg['airInterval'] > 0 ? cfg['airInterval'] : airInterval;
 	
 	console.log("sensorName: " + sensorName);
-	console.log("mqtt.keepalive: " + mqttKeepalive);
+	console.log("mqttKeepalive: " + mqttKeepalive);
+	console.log("reconnectTimeout: " + reconnectTimeout);
+	console.log("airInterval: " + airInterval);
 
     var clientId = ['d', cfg.org, cfg.type, cfg.id].join(':');
 
