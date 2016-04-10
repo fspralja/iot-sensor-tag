@@ -71,9 +71,8 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 			"clientId" : clientId,
 			"keepalive" : mqttKeepalive,
 			"username" : "use-token-auth",
-			"password" : cfg['auth-token',
+			"password" : cfg['auth-token'],
 			"reconnectPeriod" : reconnectTimeout
-			]
 		  });
 		client.on('connect', function() {
 		  console.log('MQTT client connected to IBM IoT Cloud.');
