@@ -71,27 +71,35 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 			"clientId" : clientId,
 			"keepalive" : mqttKeepalive,
 			"username" : "use-token-auth",
-			"password" : cfg['auth-token']
+			"password" : cfg['auth-token',
+			"reconnectPeriod" : reconnectTimeout,
+			]
 		  });
 		client.on('connect', function() {
 		  console.log('MQTT client connected to IBM IoT Cloud.');
 		});
+		client.on('reconnect', function() {
+		  console.log('MQTT client reconnected.');
+		});
+		client.on('offline', function() {
+		  console.log('MQTT client offline.');
+		});
 		client.on('error', function(err) {
-		  console.log('client error' + err + ', restarting...');
+		  console.log('client error' + err);
 		  //process.exit(1);
-		  client = null;
-		  setTimeout(function() {
-		  	connectClient();
-		  }, reconnectTimeout);
+		  //client = null;
+		  //setTimeout(function() {
+		  //	connectClient();
+		  //}, reconnectTimeout);
 		  
 		});
 		client.on('close', function() {
-		  console.log('client closed, restarting...');
+		  console.log('client closed');
 		  //process.exit(1);
-		  client = null;
-		  setTimeout(function() {
-		  	connectClient();
-		  }, reconnectTimeout);
+		  //client = null;
+		  //setTimeout(function() {
+		  //	connectClient();
+		  //}, reconnectTimeout);
 		  
 		});
 	};
