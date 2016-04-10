@@ -72,7 +72,7 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 			"keepalive" : mqttKeepalive,
 			"username" : "use-token-auth",
 			"password" : cfg['auth-token',
-			"reconnectPeriod" : reconnectTimeout,
+			"reconnectPeriod" : reconnectTimeout
 			]
 		  });
 		client.on('connect', function() {
