@@ -1,11 +1,12 @@
 {
-   "author": "IBM",
-   "dependencies": {
-      "sensortag":"1.2.2",
-      "mqtt":"1.7.5",
-      "getmac":"1.0.7",
-      "properties":"1.2.1"
-   },
-   "description": "Published data to the IoT cloud.",
-   "main": "sensor-tag.js"
+  "author": "IBM",
+  "dependencies": {
+    "console-stamp": "^0.2.0",
+    "getmac": "1.0.7",
+    "mqtt": "1.7.5",
+    "properties": "1.2.1",
+    "sensortag": "1.2.2"
+  },
+  "description": "Published data to the IoT cloud.",
+  "main": "sensor-tag.js"
 }

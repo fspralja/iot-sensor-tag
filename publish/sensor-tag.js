@@ -13,6 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //------------------------------------------------------------------------------
+
+//add timestamps in front of log messages
+require('console-stamp')(console, '[HH:MM:ss.l]');
+
 var SensorTag = require('sensortag');
 var mqtt = require('mqtt');
 var url = require('url');
@@ -35,6 +39,7 @@ var airInterval = 5000;
 var intervalId;
 
 var client;
+
 
 properties.parse('./config.properties', {path: true}, function(err, cfg) {
   if (err) {
