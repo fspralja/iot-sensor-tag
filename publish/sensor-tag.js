@@ -18,7 +18,7 @@
 require('console-stamp')(console, '[HH:MM:ss.l]');
 
 var SensorTag = require('sensortag');
-var mqtt = require('mqtt');
+var request = require('request');
 var url = require('url');
 var macUtil = require('getmac');
 var properties = require('properties');
@@ -26,8 +26,7 @@ var connected = false;
 
 //from config values
 var sensorName = "TI Sensor Tag";
-
-var mqttKeepalive = 30;
+var apiKey;
 var reconnectTimeout = 1000;
 
 
@@ -40,6 +39,8 @@ var intervalId;
 
 var client;
 
+var deviceId;
+
 
 properties.parse('./config.properties', {path: true}, function(err, cfg) {
   if (err) {
@@ -49,7 +50,7 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
   }
   macUtil.getMac(function(err, macAddress) {
     if (err) throw err;
-    var deviceId = macAddress.replace(/:/gi, '');
+    deviceId = macAddress.replace(/:/gi, '');
     console.log('Device MAC Address: ' + deviceId);
 
     if(cfg.id != deviceId) {
@@ -57,57 +58,22 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
     }
 
 	sensorName = cfg['sensorName'] ? cfg['sensorName'] : sensorName;
-	mqttKeepalive = cfg['mqttKeepalive'] > 0 ? cfg['mqttKeepalive'] : mqttKeepalive;
 	reconnectTimeout = cfg['reconnectTimeout'] > 0 ? cfg['reconnectTimeout'] : reconnectTimeout;
 	airInterval = cfg['airInterval'] > 0 ? cfg['airInterval'] : airInterval;
+	apiKey = cfg['apiKey'];
+	
+	if(!apiKey || apiKey == '') {
+		console.warn('No api key specified for emoncms write!');
+		process.exit(1);
+		return;
+	}
 	
 	console.log("sensorName: " + sensorName);
-	console.log("mqttKeepalive: " + mqttKeepalive);
 	console.log("reconnectTimeout: " + reconnectTimeout);
 	console.log("airInterval: " + airInterval);
 
     var clientId = ['d', cfg.org, cfg.type, cfg.id].join(':');
 
-	function connectClient() {
-	    console.log('Connecting to mqtts://' + cfg.org + '.messaging.internetofthings.ibmcloud.com:8883');
-
-		client = mqtt.connect("mqtts://" + cfg.org + '.messaging.internetofthings.ibmcloud.com:8883', 
-		  {
-			"clientId" : clientId,
-			"keepalive" : mqttKeepalive,
-			"username" : "use-token-auth",
-			"password" : cfg['auth-token'],
-			"reconnectPeriod" : reconnectTimeout
-		  });
-		client.on('connect', function() {
-		  console.log('MQTT client connected to IBM IoT Cloud.');
-		});
-		client.on('reconnect', function() {
-		  console.log('MQTT client reconnected.');
-		});
-		client.on('offline', function() {
-		  console.log('MQTT client offline.');
-		});
-		client.on('error', function(err) {
-		  console.log('client error' + err);
-		  //process.exit(1);
-		  //client = null;
-		  //setTimeout(function() {
-		  //	connectClient();
-		  //}, reconnectTimeout);
-		  
-		});
-		client.on('close', function() {
-		  console.log('client closed');
-		  //process.exit(1);
-		  //client = null;
-		  //setTimeout(function() {
-		  //	connectClient();
-		  //}, reconnectTimeout);
-		  
-		});
-	};
-	connectClient();
 	monitorSensorTag();
   });
 });
@@ -287,17 +253,34 @@ function monitorSensorTag() {
 				device.readHumidity(function(error, temperature, humidity) {
 				  device.readIrTemperature(function(error, objectTemperature, ambientTemperature) {
 					var data = {
-					   "d": {
-						 "myName": sensorName,
+						 "name": sensorName,
+						 "device_id": deviceId,
 						 "pressure" : pressure,
 						 "humidity" : humidity,
 						 "objTemp" : objectTemperature,
 						 "ambientTemp" : ambientTemperature,
 						 "temp" : temperature,
 						 "lux" : lux
-						}
 					  };
-					if(client) client.publish('iot-2/evt/air/fmt/json', JSON.stringify(data), function() {
+					
+					
+					//Lets configure and request
+					request({
+						method: 'GET',
+						url: 'https://emoncms.org/input/post.json',
+						qs: {json: data, apikey: apiKey}/*,
+						headers: { //We can define headers too
+							'Content-Type': 'MyContentType',
+							'Custom-Header': 'Custom Value'
+						}*/
+					}, function(error, response, body){
+						if(error) {
+							console.log(error);
+						} else {
+							console.log(response.statusCode, body);
+						}
+					});
+					
 					});
 				  });
 				});
