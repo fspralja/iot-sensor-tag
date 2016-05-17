@@ -76,7 +76,7 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 	console.log("reconneceTimeout: " + reconnectTimeout);
 	console.log("airInterval: " + airInterval);
 
-    var clientId = ['d', cfg.org, cfg.type, cfg.id].join(':');
+    //var clientId = ['d', cfg.org, cfg.type, cfg.id].join(':');
 
 	monitorSensorTag();
   });
@@ -93,12 +93,13 @@ function monitorSensorTag() {
 	
 	console.log('Discovered device with UUID: ' + device['uuid']);
 
-	console.log('Connecting to Device UUID: ' + device['uuid']);
-
 	var doConnect = function (err) {
 	  if(err) {
-	  	console.log('Device connect error: ' + err + ', restarting...');
-		clearInterval(intervalId);
+	  	console.log('Device connect error: ' + err + ', reconnecting...');
+		if(intervalId) {
+			clearInterval(intervalId);
+			intervalId = null;		
+		}
 		
 		setTimeout(function() {
 			console.log('Connecting to Device UUID: ' + device['uuid']);
@@ -111,20 +112,24 @@ function monitorSensorTag() {
 	  connected = true;
 	  console.log('Connected To Sensor Tag');
 	  device.discoverServicesAndCharacteristics(function(callback) {
-	    //getDeviceInfo();
+	    getDeviceInfo();
 		if(air) initAirSensors();
 		if(accel) initAccelAndGyro();
 		if(keys) initKeys();
 	  });
 	}
 
+	console.log('Connecting to Device UUID: ' + device['uuid']);
 	device.connectAndSetUp(doConnect);
 
 	device.on('disconnect', function(onDisconnect) {
 	  connected = false;
 	  //client.end();
-	  console.log('Device disconnected, restarting...');
-	  clearInterval(intervalId);
+	  console.log('Device disconnected, reconnecting...');
+	  if(intervalId) {
+		clearInterval(intervalId);
+		intervalId = null;		
+	  }
 	  //monitorSensorTag();
 	  
 	  setTimeout(function() {
@@ -249,7 +254,10 @@ function monitorSensorTag() {
 		device.enableLuxometer(function(err) {if (err) throw err;});
 		intervalId = setInterval(function() {
 		  if(!connected) {
-		  	clearInterval(intervalId);
+		  	if(intervalId) {
+				clearInterval(intervalId);
+				intervalId = null;		
+			}
 		  	return;
 		  }
 		  device.readLuxometer(function(error, lux) {
