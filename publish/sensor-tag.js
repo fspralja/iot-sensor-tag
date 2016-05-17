@@ -19,6 +19,9 @@ require('console-stamp')(console, '[HH:MM:ss.l]');
 
 var SensorTag = require('sensortag');
 var request = require('request');
+//require('request-debug')(request);
+//request.debug = true
+
 var url = require('url');
 var macUtil = require('getmac');
 var properties = require('properties');
@@ -68,8 +71,9 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 		return;
 	}
 	
-	console.log("sensorName: " + sensorName);
-	console.log("reconnectTimeout: " + reconnectTimeout);
+	console.log("sensorName: '" + sensorName + "'");
+	console.log("apiKey: '" + apiKey + "'");
+	console.log("reconneceTimeout: " + reconnectTimeout);
 	console.log("airInterval: " + airInterval);
 
     var clientId = ['d', cfg.org, cfg.type, cfg.id].join(':');
@@ -267,20 +271,13 @@ function monitorSensorTag() {
 					//Lets configure and request
 					request({
 						method: 'GET',
-						url: 'https://emoncms.org/input/post.json',
-						qs: {json: data, apikey: apiKey}/*,
-						headers: { //We can define headers too
-							'Content-Type': 'MyContentType',
-							'Custom-Header': 'Custom Value'
-						}*/
-					}, function(error, response, body){
+						url: 'https://emoncms.org/input/post.json?json=' + JSON.stringify(data) + '&apikey=' + apiKey
+					}, function(error, response, body) {
 						if(error) {
 							console.log(error);
 						} else {
 							console.log(response.statusCode, body);
 						}
-					});
-					
 					});
 				  });
 				});
