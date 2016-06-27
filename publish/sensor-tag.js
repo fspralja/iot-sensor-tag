@@ -43,7 +43,7 @@ var intervalId;
 var client;
 
 var deviceId;
-
+var discovered = false;
 
 properties.parse('./config.properties', {path: true}, function(err, cfg) {
   if (err) {
@@ -83,13 +83,14 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 });
 
 function monitorSensorTag() {
-  console.log('Make sure the Sensor Tag is on!');
 
   //SensorTag.discover(function(device){
   var onDiscover = function(device) {
 	
 	//got the device
 	SensorTag.stopDiscoverAll(onDiscover);
+	
+	discovered = true;
 	
 	console.log('Discovered device with UUID: ' + device['uuid']);
 
@@ -295,5 +296,16 @@ function monitorSensorTag() {
 	}
   };
   
-  SensorTag.discoverAll(onDiscover);
+  
+  var discover = function() {
+  	if(!discovered) {
+		SensorTag.stopDiscoverAll(onDiscover);
+
+	  	console.log('Make sure the Sensor Tag is on!');
+		device.connectAndSetUp(doConnect);
+		setTimeout(discover, reconnectTimeout*10);
+	}
+  }
+  
+  discover();
 };
