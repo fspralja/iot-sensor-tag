@@ -302,7 +302,8 @@ function monitorSensorTag() {
 		SensorTag.stopDiscoverAll(onDiscover);
 
 	  	console.log('Make sure the Sensor Tag is on!');
-		device.connectAndSetUp(doConnect);
+		SensorTag.discoverAll(onDiscover);
+		
 		setTimeout(discover, reconnectTimeout*10);
 	}
   }
