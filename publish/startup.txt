@@ -1,0 +1,3 @@
+sudo bash
+cp sensortag-app /etc/init.d
+update-rc.d sensortag-app defaults
