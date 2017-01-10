@@ -276,7 +276,12 @@ function monitorSensorTag() {
 						 "lux" : lux
 					  };
 					
-					
+					console.log(JSON.stringify(data,null,1).replace(/(\r\n|\n|\r)/gm,""));
+					if(data.temp == -40) {
+						console.log("temp = -40, skipping...");
+						return;
+					}
+
 					//Lets configure and request
 					request({
 						method: 'GET',
