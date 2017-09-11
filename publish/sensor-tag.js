@@ -45,6 +45,9 @@ var client;
 var deviceId;
 var discovered = false;
 
+var homeAssistantHost = "http://somewhere.local:8123";
+var homeAssistantKey = "blabla";
+
 properties.parse('./config.properties', {path: true}, function(err, cfg) {
   if (err) {
     console.error('A file named config.properties containing the device registration from the IBM IoT Cloud is missing.');
@@ -64,6 +67,9 @@ properties.parse('./config.properties', {path: true}, function(err, cfg) {
 	reconnectTimeout = cfg['reconnectTimeout'] > 0 ? cfg['reconnectTimeout'] : reconnectTimeout;
 	airInterval = cfg['airInterval'] > 0 ? cfg['airInterval'] : airInterval;
 	apiKey = cfg['apiKey'];
+	
+	homeAssistantHost = cfg['homeAssistantHost'];
+	homeAssistantKey = cfg['homeAssistantKey'];
 	
 	if(!apiKey || apiKey == '') {
 		console.warn('No api key specified for emoncms write!');
@@ -291,6 +297,15 @@ function monitorSensorTag() {
 							console.log(error);
 						} else {
 							console.log(response.statusCode, body);
+							request({url: homeAssistantHost + "/api/services/mqtt/publish", method: "POST",
+								headers: {"x-ha-access": homeAssistantKey, "Content-Type": "application/json"}, 
+								json: {"payload": JSON.stringify(data), "topic": "taraca/sensor1", "retain": "True"}}, function(error, response, body) {
+								if(error) {
+                                                        		console.log(error);
+                                                		} else {
+									console.log(response.statusCode, body);
+								}
+							});
 						}
 					});
 				  });
